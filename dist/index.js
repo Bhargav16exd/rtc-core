@@ -10,10 +10,12 @@ wss.on("connection", function connection(ws) {
         if (message.type === 'sender') {
             senderSocket = ws;
             console.log('sender connected');
+            broadcastConnectionStatus();
         }
         else if (message.type === 'reciever') {
             recieverSocket = ws;
             console.log('reciever connected');
+            broadcastConnectionStatus();
         }
         else if (message.type === 'createOffer') {
             if (ws !== senderSocket) {
@@ -40,4 +42,29 @@ wss.on("connection", function connection(ws) {
             }
         }
     });
+    ws.on('close', function close() {
+        if (ws === senderSocket) {
+            senderSocket = null;
+            console.log("Sender disconnected");
+            broadcastConnectionStatus();
+        }
+        else if (ws === recieverSocket) {
+            recieverSocket = null;
+            console.log("Receiver disconnected");
+            broadcastConnectionStatus();
+        }
+    });
 });
+function broadcastConnectionStatus() {
+    const statusMessage = {
+        type: "connectionStatus",
+        senderConnected: senderSocket !== null,
+        receiverConnected: recieverSocket !== null,
+    };
+    wss.clients.forEach((client) => {
+        if (client.readyState === ws_1.WebSocket.OPEN) {
+            console.log("Broadcasting connection status");
+            client.send(JSON.stringify(statusMessage));
+        }
+    });
+}
